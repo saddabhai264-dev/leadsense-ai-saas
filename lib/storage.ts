@@ -59,9 +59,6 @@ async function uploadToCloudinary(input: UploadInput): Promise<UploadedObject> {
     const stream = cloudinary.uploader.upload_stream({
       public_id: publicId,
       resource_type: "raw",
-      use_filename: false,
-      unique_filename: false,
-      overwrite: false,
     }, (error, uploadResult) => {
       if (error || !uploadResult) reject(error ?? new Error("Cloudinary upload failed"));
       else resolve({ public_id: uploadResult.public_id, secure_url: uploadResult.secure_url });

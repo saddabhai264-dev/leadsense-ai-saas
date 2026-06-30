@@ -41,29 +41,35 @@ export async function POST(request: NextRequest) {
     })));
 
     let archivedCsv: { id: string; url: string | null } | null = null;
+    let archiveWarning: string | null = null;
     if (isFileStorageConfigured()) {
-      const uploaded = await uploadFileToStorage({
-        userId: user.id,
-        filename: `leads-import-${new Date().toISOString().slice(0, 10)}.csv`,
-        contentType: "text/csv",
-        body: Buffer.from(csv, "utf8"),
-        purpose: "lead-import",
-      });
-
-      const storedFile = await prisma.storedFile.create({
-        data: {
+      try {
+        const uploaded = await uploadFileToStorage({
           userId: user.id,
-          bucket: uploaded.bucket,
-          key: uploaded.key,
-          filename: uploaded.filename,
-          contentType: uploaded.contentType,
-          size: uploaded.size,
-          url: uploaded.url,
+          filename: `leads-import-${new Date().toISOString().slice(0, 10)}.csv`,
+          contentType: "text/csv",
+          body: Buffer.from(csv, "utf8"),
           purpose: "lead-import",
-        },
-        select: { id: true, url: true },
-      });
-      archivedCsv = storedFile;
+        });
+
+        const storedFile = await prisma.storedFile.create({
+          data: {
+            userId: user.id,
+            bucket: uploaded.bucket,
+            key: uploaded.key,
+            filename: uploaded.filename,
+            contentType: uploaded.contentType,
+            size: uploaded.size,
+            url: uploaded.url,
+            purpose: "lead-import",
+          },
+          select: { id: true, url: true },
+        });
+        archivedCsv = storedFile;
+      } catch (error) {
+        console.warn("Lead CSV archive failed", error);
+        archiveWarning = "Leads were imported, but the CSV backup could not be archived to file storage.";
+      }
     }
 
     return NextResponse.json({
@@ -72,6 +78,7 @@ export async function POST(request: NextRequest) {
       errors: result.errors,
       totalRows: result.totalRows,
       archivedCsv,
+      archiveWarning,
     });
   } catch (error) {
     return apiError(error);
