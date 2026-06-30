@@ -1,0 +1,296 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum LeadStatus {
+  new
+  contacted
+  interested
+  closed
+}
+
+enum EmailStatus {
+  unknown
+  valid
+  risky
+  invalid
+}
+
+enum CampaignStatus {
+  draft
+  active
+  paused
+  completed
+}
+
+enum CampaignLeadStatus {
+  queued
+  sent
+  replied
+  bounced
+  unsubscribed
+}
+
+enum SenderProvider {
+  gmail
+  outlook
+  smtp
+}
+
+enum SenderStatus {
+  draft
+  connected
+  error
+}
+
+enum EmailEventType {
+  queued
+  sent
+  failed
+  opened
+  clicked
+  replied
+  bounced
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  passwordHash  String?
+  companyName   String?
+  plan          String    @default("free")
+  accounts      Account[]
+  sessions      Session[]
+  leads         Lead[]
+  websiteAnalyses WebsiteAnalysis[]
+  emailDrafts   EmailDraft[]
+  campaigns     Campaign[]
+  senderAccounts SenderAccount[]
+  emailEvents   EmailEvent[]
+  subscriptions Subscription[]
+  storedFiles    StoredFile[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Account {
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([provider, providerAccountId])
+}
+
+model Session {
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@id([identifier, token])
+}
+
+model Lead {
+  id          String     @id @default(cuid())
+  userId      String
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  firstName   String
+  lastName    String     @default("")
+  email       String?
+  phone       String?
+  jobTitle    String?
+  companyName String
+  companyDomain String?
+  companySize String?
+  industry    String?
+  location    String?
+  linkedinUrl String?
+  status      LeadStatus @default(new)
+  score       Int        @default(0)
+  scoreReason String?
+  emailStatus EmailStatus @default(unknown)
+  emailConfidence Int?
+  emailVerificationReason String?
+  emailVerifiedAt DateTime?
+  source      String     @default("Manual")
+  notes       String?
+  lastContactedAt DateTime?
+  campaignLeads CampaignLead[]
+  emailEvents EmailEvent[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([userId])
+  @@index([userId, status])
+  @@index([userId, score])
+}
+
+model WebsiteAnalysis {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  url       String
+  result    Json
+  createdAt DateTime @default(now())
+}
+
+model EmailDraft {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  leadId    String?
+  subject   String
+  body      String
+  tone      String   @default("professional")
+  createdAt DateTime @default(now())
+}
+
+model Campaign {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  audience    String
+  offer       String
+  goal        String    @default("Book a discovery call")
+  status      CampaignStatus @default(draft)
+  totalLeads  Int       @default(0)
+  replyRate   Float     @default(0)
+  steps       CampaignStep[]
+  campaignLeads CampaignLead[]
+  emailEvents EmailEvent[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([userId, status])
+}
+
+model CampaignStep {
+  id         String   @id @default(cuid())
+  campaignId String
+  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  stepOrder  Int
+  delayDays  Int      @default(0)
+  subject    String
+  body       String
+  createdAt  DateTime @default(now())
+
+  @@unique([campaignId, stepOrder])
+  @@index([campaignId])
+}
+
+model CampaignLead {
+  id          String   @id @default(cuid())
+  campaignId  String
+  leadId      String
+  campaign    Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  status      CampaignLeadStatus @default(queued)
+  currentStep Int      @default(1)
+  sentAt      DateTime?
+  repliedAt   DateTime?
+  bouncedAt   DateTime?
+  addedAt     DateTime @default(now())
+
+  @@unique([campaignId, leadId])
+  @@index([campaignId])
+  @@index([leadId])
+}
+
+model SenderAccount {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider    SenderProvider @default(smtp)
+  fromName    String
+  fromEmail   String
+  replyTo     String?
+  smtpHost    String
+  smtpPort    Int      @default(587)
+  smtpUsername String
+  smtpPasswordEncrypted String?
+  dailyLimit  Int      @default(50)
+  status      SenderStatus @default(draft)
+  lastTestedAt DateTime?
+  emailEvents EmailEvent[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model EmailEvent {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  campaignId  String?
+  campaign    Campaign? @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  leadId      String?
+  lead        Lead?     @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  senderAccountId String?
+  senderAccount SenderAccount? @relation(fields: [senderAccountId], references: [id], onDelete: SetNull)
+  eventType   EmailEventType
+  subject     String?
+  metadata    Json     @default("{}")
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([campaignId, eventType])
+}
+
+model Subscription {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stripeCustomerId String?
+  stripeSubscriptionId String? @unique
+  plan        String   @default("pro")
+  status      String   @default("incomplete")
+  currentPeriodEnd DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([stripeCustomerId])
+}
+
+model StoredFile {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bucket      String
+  key         String   @unique
+  filename    String
+  contentType String
+  size        Int
+  url         String?
+  purpose     String   @default("upload")
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([userId, purpose])
+}
