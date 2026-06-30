@@ -1,0 +1,6 @@
+first_name,last_name,email,phone,job_title,company_name,company_domain,company_size,industry,location,linkedin_url,status,source,notes
+Ali,Khan,ali.khan@example.com,+923001234567,Founder,Test Company,testcompany.com,11-50,SaaS,Pakistan,https://www.linkedin.com/in/ali-khan,new,Local Test,First test lead for import verification
+Sara,Ahmed,sara.ahmed@example.com,+971501234567,Marketing Manager,Growth Co,growthco.com,51-200,Marketing,UAE,https://www.linkedin.com/in/sara-ahmed,new,Local Test,Second test lead for import verification
+Usman,Raza,usman.raza@example.com,+923211234567,Head of Sales,Pipeline Labs,pipelinelabs.com,201-500,B2B Software,Saudi Arabia,https://www.linkedin.com/in/usman-raza,contacted,Local Test,Use this row to verify contacted pipeline stage
+Fatima,Noor,fatima.noor@example.com,+923331234567,Operations Lead,ScaleOps,scaleops.io,51-200,Operations,United Kingdom,https://www.linkedin.com/in/fatima-noor,interested,Local Test,Use this row to verify interested pipeline stage
+Hamza,Malik,hamza.malik@example.com,+923441234567,CEO,RevenueNest,revenuenest.ai,1-10,AI Sales Tools,United States,https://www.linkedin.com/in/hamza-malik,closed,Local Test,Use this row to verify closed pipeline stage
